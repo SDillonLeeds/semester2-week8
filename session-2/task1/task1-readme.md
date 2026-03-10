@@ -1,141 +1,50 @@
 # Task 1: Simple Modularisation
 
-## Learning Objectives
-By the end of this activity, you should be able to:
-- Separate a C program into header and implementation files
-- Implement proper include guards
-- Understand the relationship between interface and implementation
-- Compile a multi-file C program
+## Code
+In this activity, you'll take the Student Record Management program from last week's Structure activity and refactor it into a properly modularised structure. This involves separating the program into four files:
 
-## Background
-In this activity, you'll take the Student Record Management program from last week's Structure activity and refactor it into a properly modularised structure. This involves separating the program into three files:
-
-1. **student.h** - Header file containing structure definitions and function declarations
-2. **student.c** - Implementation file containing function definitions
-3. **main.c** - Main program file that uses the student module
+1. **structure.h** - Header file containing structure definition
+1. **student.h** - Header file containing function declarations
+3. **student.c** - Implementation file containing function definitions
+4. **main.c** - Main program file that contains `main()` and uses the student.c functions
 
 ## Starting Code
 The original, single-file student record program, is provided in the repository: `student_record_orig.c`
 
 
-## Step 1: Create the Header File (student.h)
-Create a new file named `student.h` that contains:
-- Include guards
+## Step 1: Create the data structure Header File (structure.h)
+Create a new file named `structure.h` that contains:
 - Structure definition
-- Function prototypes (declarations)
-- Constant definitions
 
-The header file should provide the **interface** to your student record module without revealing implementation details.
+## Step 2: Create the data structure Header File (student.h)
+Create a new file named `student.h` that contains:
+- Function definitions
+- `#define` statements that specify global values
 
-**Your Task:** Complete the student.h file below:
-
-```c
-/**
- * @file student.h
- * @brief Header file for student record management system
- */
-
-/* Add include guards here */
-#ifndef STUDENT_H
-#define STUDENT_H
-
-/* Add necessary includes here */
+The header files provide the **interface** to your student record source code without implementation details.
 
 
-/* Add constant definitions here */
-
-
-/* Add the Student structure definition here */
-
-
-/* Add function prototypes here */
-
-
-#endif /* STUDENT_H */
-```
-
-## Step 2: Create the Implementation File (student.c)
-Create a new file named `student.c` that contains:
-- Necessary includes (including your header file)
+## Step 3: Create the source code file (student.c)
+Create a new file (or adapt the existing one) named `student.c` that contains:
+- Necessary includes - library header files as well as your header files
 - Function implementations
 
-The implementation file provides the actual code that makes the functions work, but doesn't include main().
+This implementation file provides the actual code for the functions, but doesn't include `main()`.
 
-**Important:** When including headers, always include your own header file first, then system headers.
-
-**Your Task:** Complete the student.c file below:
-
-```c
-/**
- * @file student.c
- * @brief Implementation of student record management functions
- */
-
-/* Add necessary includes here */
-#include "student.h"  /* Always include your own header first */
-#include <stdio.h>
-#include <string.h>
-
-
-/* Implement the calculate_average function here */
-
-
-
-/* Implement the display_student function here */
-
-
-
-/* Implement the update_name function here */
-
-
-
-/* Implement the update_mark function here */
-
-
-```
-
-## Step 3: Create the Main Program File (main.c)
+## Step 4: Create the main source code file (main.c)
 Create a new file named `main.c` that contains:
-- Necessary includes (including your header file)
-- The main() function
+- Necessary includes - library header files as well as your header files
+- Implementation of your `main()` function
 
-The main program file focuses on the high-level flow of your program, using the functions defined in your student module.
-
-**Your Task:** Complete the main.c file below:
-
-```c
-/**
- * @file main.c
- * @brief Main program for student record management system
- */
-
-/* Add necessary includes here */
-
-
-
-/* Implement the main function here */
-
-
-```
-
-## Step 4: Compile and Test
+## Step 5: Compile and Test
 Compile your modularised program with the following commands:
 
 ```bash
-# Compile the implementation file to an object file
-gcc -c student.c -o student.o
-
-# Compile the main program file to an object file
-gcc -c main.c -o main.o
-
-# Link the object files to create the executable
-gcc student.o main.o -o student_program
-
-# Alternative one-line compilation (simpler but less efficient for large projects)
-gcc student.c main.c -o student_program
+# Compilation
+gcc student.c main.c -o student
 
 # Run the program
-./student_program
+./student
 ```
 
 The output should be identical to the original single-file program.
@@ -156,20 +65,14 @@ The output should be identical to the original single-file program.
 ## Extension Tasks
 If you finish early, try these extension tasks:
 
-1. Add a new function to the student module that sorts an array of students by their average mark
-2. Add appropriate documentation comments to all files
-3. Update the program to handle multiple students
-4. Create a new module for file operations (e.g., saving and loading student records)
+1. Add appropriate documentation and comments to all files
+2. Update the program to handle multiple students
+3. Create a new module for file operations (e.g., saving and loading student records)
 
-## Note on Documentation
+## Learning Objectives
+By the end of this activity, you should be able to:
+- Separate a C program into header and implementation files
+- Implement proper include guards
+- Understand the relationship between interface and implementation
+- Compile a multi-file C program
 
-Maintain consistent documentation style across all files. Use the same Doxygen-style comments as in the original code for all new functions and data structures:
-
-```c
-/**
- * @brief Short description of function/structure
- *
- * @param param_name Description of parameter
- * @return Description of return value
- */
-```

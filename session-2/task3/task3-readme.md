@@ -1,204 +1,261 @@
-# Activity 3: Modularising PGM Tools
+# Task 3: Creating a Makefile
 
-## Learning Objectives
-By the end of this activity, you should be able to:
-- Identify logical components for modularisation in a larger program
-- Design appropriate module boundaries and interfaces
-- Create a multi-module C project with clear separation of concerns
-- Implement a professional project directory structure
-- Create a makefile for a multi-file project
-- Apply modularisation principles to a real-world example
 
-## Background
-In this activity, you'll refactor the PGM image tools program from last week's structures session into a properly modularised structure. The PGM tools program allows people to read, display, invert, and rotate PGM (Portable Gray Map) images.
 
-This is a more substantial exercise that will likely extend beyond the lab session. You should aim to complete the analysis, planning, and header file creation during the session, and finish the implementation and testing as independent study.
-
-## Starting Point
-You'll begin with the original, single-file PGM tools program which you worked with in the previous session. If you don't have your own version, a reference implementation is available in the course materials.
-
-## Step 1: Analyse the Program Structure
-Carefully examine the PGM tools program to identify distinct components that could be separated into modules. Consider the following questions:
-
-1. What are the main functional areas of the program?
-2. Which functions are related and could be grouped together?
-3. What data structures are used, and which functions operate on them?
-4. What naming conventions would provide clarity and consistency?
-5. What are the dependencies between different parts of the program?
-
-**Deliverable**: Create a brief modularisation plan document (1-2 paragraphs) explaining your approach to breaking down the program. Identify 3-5 logical modules and justify their boundaries.
-
-## Step 2: Create Project Directory Structure
-Create a directory structure for your modularised project. A typical structure might include:
+## Makefile Basics
+A makefile consists of a set of rules, each with the following format:
 
 ```
-pgm_tools/
-├── include/       (Header files)
-├── src/           (Source files)
-├── obj/           (Object files - will be created during compilation)
-└── Makefile
+target: dependencies
+<tab>commands
 ```
 
-You can create this structure with the following terminal commands:
+- **target**: What we're trying to build (executable, object file, etc.)
+- **dependencies**: Files that the target depends on
+- **commands**: Shell commands to build the target (must be indented with a tab, not spaces)
 
-```bash
-mkdir -p pgm_tools/include pgm_tools/src pgm_tools/obj
-cd pgm_tools
-touch Makefile
-```
+**IMPORTANT**: Commands must be indented with an actual tab character, not spaces. This is a common source of errors in makefiles!
 
-## Step 3: Define Module Interfaces
-Based on your analysis, create header files for each module you've identified. Focus on defining clear interfaces that hide implementation details.
-
-For each module:
-1. Decide what functionality belongs in that module
-2. Determine what functions should be exposed in the interface
-3. Create a header file with appropriate include guards
-4. Define necessary structures and function prototypes
-5. Document the purpose of each function with comments
-
-Here's an example skeleton for a module header file:
-
-```c
-/**
- * @file pgm_image.h
- * @brief Structure definition and basic operations for PGM images
- */
-
-#ifndef PGM_IMAGE_H
-#define PGM_IMAGE_H
-
-/* TODO: Define your image structure here */
-
-/* TODO: Declare functions for creating, freeing, and manipulating images */
-
-#endif /* PGM_IMAGE_H */
-```
-
-**Deliverable**: Create header files for each module you identified in Step 1.
-
-## Step 4: Implement Module Functions
-Create implementation files (.c files) for each module:
-
-1. Include the module's own header file first
-2. Include any other necessary headers
-3. Implement all functions declared in the header
-4. Follow consistent error handling and memory management patterns
-
-When implementing the modules:
-- Ensure each function does exactly what its header documentation promises
-- Provide appropriate error checking and handling
-- Follow consistent naming conventions
-- Consider edge cases and handle them gracefully
-
-**Deliverable**: Create implementation files for each module.
-
-## Step 5: Implement Main Program
-Create a main.c file that uses your modules to implement the functionality of the original program:
-
-1. Include all necessary module headers
-2. Implement the main function using your modularised functions
-3. Focus on program flow rather than implementation details
-4. Ensure the behaviour matches the original program
-
-## Step 6: Create a Makefile
-Create a makefile to compile your modularised program. Your makefile should:
-
-1. Define variables for compiler, compiler flags, and directories
-2. Include rules for building the final executable
-3. Include rules for building each object file
-4. Include a clean target to remove generated files
-5. Use appropriate dependencies to trigger recompilation when needed
-
-Here's a starter makefile you can adapt:
+## Step 1: Create a Basic Makefile
+Create a file named `Makefile` (note: no file extension) with a basic rule to build your student program:
 
 ```make
-# Compiler and flags
+student_program: main.c student.c student.h
+	gcc main.c student.c -o student_program
+```
+
+This tells make: "To build student_program, you need main.c, student.c, and student.h, 
+and the command to build it is gcc main.c student.c -o student_program."
+
+Test this makefile by running:
+```bash
+make
+```
+
+## Step 2: Add Variables
+Makefiles become more maintainable when you use variables. Add variables for the compiler, compiler flags, and target:
+
+```make
+# Variables
 CC = gcc
-CFLAGS = -Wall -Wextra -I./include
+CFLAGS = -Wall -Wextra
+TARGET = student_program
 
-# Directories
-SRC_DIR = src
-OBJ_DIR = obj
-INC_DIR = include
+# Default target
+$(TARGET): main.c student.c student.h
+	$(CC) $(CFLAGS) main.c student.c -o $(TARGET)
+```
 
-# Target executable
-TARGET = pgm_tools
+Test this version:
+```bash
+make
+```
+
+## Step 3: Add Object Files and Separate Compilation
+For larger projects, it's more efficient to compile source files into object files separately, then link them together:
+
+```make
+# Variables
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = student_program
+OBJS = main.o student.o
+
+# Default target
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+
+# Object files
+main.o: main.c student.h
+	$(CC) $(CFLAGS) -c main.c
+
+student.o: student.c student.h
+	$(CC) $(CFLAGS) -c student.c
+```
+
+This approach compiles each source file into an object file, then links them together. Make will only recompile files that have changed.
+
+Test this version:
+```bash
+make
+```
+
+Notice that make determines which files need to be recompiled based on their modification times. 
+If a source file is newer than its corresponding object file, or if a header file included by a source file has changed, 
+make will recompile that source file.
+
+Try changing one of your source files and running make again. Notice that only the changed file is recompiled.
+
+## Step 4: Add a Clean Target
+It's common to include a "clean" target that removes all generated files:
+
+```make
+# Variables
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = student_program
+OBJS = main.o student.o
+
+# Default target
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+
+# Object files
+main.o: main.c student.h
+	$(CC) $(CFLAGS) -c main.c
+
+student.o: student.c student.h
+	$(CC) $(CFLAGS) -c student.c
+
+# Clean up
+clean:
+	rm -f $(OBJS) $(TARGET)
+```
+
+Test the clean target:
+```bash
+make clean
+```
+
+This should remove all .o files and the executable.
+
+## Step 5: Add an "all" Target and Phony Targets
+It's a common convention to include an "all" target that builds everything. 
+We'll also mark targets that don't represent actual files as "phony":
+
+```make
+# Variables
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = student_program
+OBJS = main.o student.o
+
+# Phony targets (not actual files)
+.PHONY: all clean
 
 # Default target
 all: $(TARGET)
 
-# You need to add rules for:
-# 1. Creating the executable from object files
-# 2. Compiling source files into object files
-# 3. Cleaning generated files
-# 4. Handling dependencies
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+
+# Object files
+main.o: main.c student.h
+	$(CC) $(CFLAGS) -c main.c
+
+student.o: student.c student.h
+	$(CC) $(CFLAGS) -c student.c
+
+# Clean up
+clean:
+	rm -f $(OBJS) $(TARGET)
+```
+
+Now you can run:
+```bash
+make all
+```
+
+Which is equivalent to just running `make` since "all" is the first target.
+
+## Step 6: Use Pattern Rules (Optional)
+For larger projects with many similar files, you can use pattern rules to simplify your makefile:
+
+```make
+# Variables
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = student_program
+OBJS = main.o student.o
 
 # Phony targets
 .PHONY: all clean
+
+# Default target
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CC) $(CFLAGS) $(OBJS) -o $(TARGET)
+
+# Pattern rule for object files
+%.o: %.c student.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Clean up
+clean:
+	rm -f $(OBJS) $(TARGET)
 ```
 
-**Remember**: Commands in makefiles must be indented with tabs, not spaces.
+This uses a pattern rule with automatic variables:
+- `$<` represents the first dependency (the .c file)
+- `$@` represents the target (the .o file)
 
-## Step 7: Test Your Modularised Program
-Compile and test your program to ensure it works correctly:
+## Common Issues with Makefiles
 
-1. Run your makefile to build the program
-2. Test the program with sample PGM images
-3. Verify that all functionality works as expected
-4. Test error handling by providing invalid inputs
+1. **Spaces vs. Tabs**: Commands in makefiles must be indented with tabs, not spaces. This is the most common source of errors.
+   - Error message: `Makefile:4: *** missing separator. Stop.`
+   - Solution: Ensure your editor uses tabs for indentation in makefiles.
+   - Check with: `cat -e Makefile` (tabs will appear as `^I`)
 
-## Design Considerations
+2. **Missing Dependencies**: If you forget to include a dependency, make won't know when to rebuild a target.
+   - Symptom: Changes to files don't trigger rebuilds when they should
+   - Solution: Ensure all dependencies are listed for each target
 
-As you work on modularising the PGM tools program, consider these design questions:
+3. **Circular Dependencies**: When two targets directly or indirectly depend on each other.
+   - Error message: `Circular target1 <- target2 <- target1 dependency dropped.`
+   - Solution: Redesign your makefile to remove the circular dependency
 
-1. **Module Boundaries**: What logical groupings make the most sense for this application? How would you determine what belongs in each module?
+4. **Phony Targets**: Targets like "clean" don't create files named "clean". Without .PHONY, if a file named "clean" exists, the target may not run.
+   - Solution: Use `.PHONY: clean all` for targets that don't produce files
 
-2. **Naming Conventions**: What prefix or naming pattern will you use for functions within each module?
+## Testing Your Makefile
 
-3. **Data Structures**: Should the image structure be visible to all modules, or should some modules only interact with it through function calls?
+To fully test your makefile:
 
-4. **Error Handling**: What consistent approach to error reporting will you use across modules?
-
-5. **Memory Management**: Which module should be responsible for allocating and freeing memory?
-
-## Modularisation Principles to Follow
-
-Throughout this activity, keep these principles in mind:
-
-1. **Single Responsibility**: Each module should have a clear, focused purpose
-2. **Information Hiding**: Only expose what's necessary in the interface
-3. **Low Coupling**: Minimise dependencies between modules
-4. **High Cohesion**: Related functionality should be grouped together
-5. **Consistent Interfaces**: Use consistent naming and parameter patterns
-6. **Clear Documentation**: Document all public functions thoroughly
-
-## Suggested Module Breakdown
-
-While you should develop your own modularisation plan, here's one possible approach to consider:
-
-1. **Image Module**: Core structure definition and memory management
-2. **I/O Module**: File reading and writing operations
-3. **Processing Module**: Image manipulation algorithms
-4. **Display Module**: Interface and image display functions
-5. **Main Program**: Program flow and interaction
+1. Run `make clean` to start fresh
+2. Run `make` to build everything
+3. Run `make` again - nothing should rebuild unless you've made changes
+4. Modify student.c and run `make` - only student.c should recompile
+5. Modify student.h and run `make` - both student.c and main.c should recompile
+6. Run `make clean` and verify all generated files are removed
 
 ## Reflection Questions
 
-After completing the activity, consider the following questions:
-
-1. How did you decide on the boundaries between modules? What criteria did you use?
-2. What challenges did you encounter during the modularisation process?
-3. How does your modularised version improve upon the original single-file implementation?
-4. If you were to add a new feature (e.g., image blurring), how would your modular structure accommodate this?
-5. How might you further improve the modular design of this program?
+1. How does using a makefile improve the development process compared to manual compilation?
+2. Why is it better to compile to object files first rather than directly to an executable?
+3. Why is it important to list header files as dependencies for object files?
+4. How would you modify the makefile to add a new source file (e.g., utils.c and utils.h)?
+5. What is the purpose of the PHONY target, and why is it used for targets like "clean"?
 
 ## Extension Tasks
 
-If you complete the main activity, try these extensions:
+1. Add a "debug" target that compiles the program with debugging symbols (-g flag)
+2. Create a directory structure with src/, include/, and obj/ folders and update the makefile to handle this structure
+3. Add automatic dependency generation using gcc's -MMD and -MP flags
+4. Add a "run" target that builds and then executes the program
+5. Add a "release" target that builds with optimisation flags (-O2 or -O3)
 
-1. Add a new image processing function (e.g., blur, threshold, edge detection)
-2. Implement automated testing for your modules
-3. Enhance error handling with a dedicated error reporting module
-4. Modify the image structure to use opaque types for better information hiding
-5. Add support for another image format (e.g., PPM)
+## Makefile Best Practices
+
+- Use variables for compiler, flags, file lists, and directories
+- Include header files as dependencies for object files
+- Use pattern rules for similar tasks
+- Mark non-file targets as .PHONY
+- Include both "all" and "clean" targets
+- Use descriptive variable names
+- Add comments explaining complex parts
+- Keep rules organised by their purpose
+- Test your makefile thoroughly with different scenarios
+
+## Learning Objectives
+By the end of this activity, you should be able to:
+- Create a basic makefile for a multi-file C project
+- Understand makefile syntax and structure
+- Define dependencies correctly
+- Use variables in makefiles
+- Create both build and utility targets (e.g., clean)
+
+## Background
+In the previous activity, we modularised the student record management program into separate header and implementation files. 
+Now, we'll create a makefile to automate the build process for this project. 
+This will allow us to compile our program with a simple `make` command, and only recompile the necessary files when changes are made.
