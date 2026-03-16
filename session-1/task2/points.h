@@ -1,11 +1,15 @@
+/* points.h*/
+#ifndef POINTS_H
+#define POINTS_H
 
-// define the structure here 
-
-typedef struct _point {
-    // your code
-} Point;
+typedef struct {
+    float x, y;
+} point_t;
 
 // state function headers here
 
-float distance( Point p, Point q );
+float distance(point_t p, point_t q);
+point_t reflect(point_t p);
+point_t shift(point_t p, point_t dq);
 
+#endif

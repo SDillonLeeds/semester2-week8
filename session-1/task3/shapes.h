@@ -1,23 +1,27 @@
+/* shapes.h */
+#ifndef SHAPES_H
+#define SHAPES_H
 
-// structure definitions
-
-typedef struct _point {
+//////// STRUCTS ////////
+typedef struct {
     float x;
     float y;
-} Point;
+} point_t;
 
-// define the Rectangle structure here
+typedef struct {
+    point_t centre;
+    float width, height;
+} rectangle_t;
+//////// STRUCTS ////////
 
-typedef struct _rectangle {
-    // fields
-} Rectangle;
 
-// function headers - implement in shapes.c
+void displayRect(rectangle_t rect);
+rectangle_t makeRect(point_t centre, float width, float height);
+float getArea(rectangle_t rect);
+void shiftRect(rectangle_t* rect, point_t delta);
+void scaleRect(rectangle_t* rect, float scale);
 
-Rectangle makeRectangle( Point p, float width, float height );
-float area( Rectangle r );
-void shiftRectangle( Rectangle *r, Point dp );
-void scaleRectangle( Rectangle *r, float scale );
+void getRectCorners(rectangle_t rect, point_t* corners);
+rectangle_t rotateRect90Deg(rectangle_t rect);
 
-//Point *corners( Rectangle r );
-//Rectangle rotate90( Rectangle r );
+#endif

@@ -1,37 +1,26 @@
-/**
- * @file activity3-pgm_tools_refactored.c
- * @brief Tools for manipulating PGM (Portable Gray Map) image files
- * 
- * COMP1850 Structures Activity 3
- * 
- * Your task is to refactor this file to use a PGMImage structure.
- */
+/* pgm_tools.c */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-/* TODO: Define a PGMImage structure that encapsulates:
-   - width and height
-   - max_gray value
-   - 2D array of pixel values (pixels)
-*/
+#include "pgm_tools.h"
 
 
 /* TODO: Update these function prototypes to use your PGMImage structure */
 /* Function prototypes */
-unsigned char **allocate_image_array(int height, int width);
-void free_image_array(unsigned char **image, int height);
-unsigned char **read_pgm_image(const char *filename, int *height, int *width, int *max_gray);
-void print_image_info(const char *filename, int height, int width, int max_gray);
-void print_image_values(unsigned char **pixels, int height, int width);
-unsigned char **invert_image_colors(unsigned char **original_image, int height, int width, int max_gray);
-unsigned char **rotate_image(unsigned char **original_image, int height, int width, int degrees);
-int save_pgm_image(const char *filename, unsigned char **pixels, int height, int width, int max_gray);
-int get_user_menu_choice(const char *message);
-void display_menu(void);
+PGMImage_t allocateImage(int height);
+void freeImage(PGMImage_t* image);
+PGMImage_t readPGMimage(const char* filePath);
+void printImageInfo(const char* filePath);
+void printImageValues(PGMImage_t* image, int height, int width);
+PGMImage_t invertImageColours(PGMImage_t* original);
+PGMImage_t rotateImage(PGMImage_t* original, int degrees);
+int savePGMimage(const char* filePath, PGMImage_t* image);
+int getUserMenuChoice(const char* message);
+void displayMenu(void);
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     /* Check command line arguments */
     if (argc != 2) {
         printf("Usage: %s <image_path>\n", argv[0]);
@@ -40,97 +29,97 @@ int main(int argc, char **argv) {
 
     /* TODO: Refactor this section to use your PGMImage structure */
     /* Variables to store image dimensions and max gray value */
-    int height, width, max_gray;
-    unsigned char **image_pixels;
+    int height, width, maxGrey;
+    unsigned char** imagePixels;
     
     /* Read the image */
-    image_pixels = read_pgm_image(argv[1], &height, &width, &max_gray);
+    imagePixels = readPGMimage(argv[1], &height, &width, &maxGrey);
     
     /* Check if image reading was successful */
-    if (image_pixels == NULL) {
+    if (imagePixels == NULL) {
         return 1;
     }
     
     /* Display image information */
-    print_image_info(argv[1], height, width, max_gray);
+    printImageInfo(argv[1], height, width, maxGrey);
 
     int choice = -1;
-    char output_filename[100];
-    int rotation_degrees;
-    unsigned char **processed_image = NULL;
+    char outputFilepath[100];
+    int rotationDeg;
+    unsigned char** processedImage = NULL;
 
     /* Main program loop */
     do {
         choice = -1;
-        display_menu();
+        displayMenu();
         while (choice < 1)
-            choice = get_user_menu_choice("Enter choice");
+            choice = getUserMenuChoice("Enter choice");
 
         switch (choice) {
         case 1: /* View image */
-            print_image_values(image_pixels, height, width);
+            printImageValues(imagePixels, height, width);
             break;
             
         case 2: /* Invert image */
             /* TODO: Refactor this section to use your PGMImage structure */
             printf("Inverting image colours...\n");
-            processed_image = invert_image_colors(image_pixels, height, width, max_gray);
+            processedImage = invertImageColours(imagePixels, height, width, maxGrey);
             
-            printf("Enter output filename: ");
-            scanf("%99s", output_filename);
+            printf("Enter output filePath: ");
+            scanf("%99s", outputFilepath);
             getchar(); /* Consume newline */
             
-            if (save_pgm_image(output_filename, processed_image, height, width, max_gray)) {
-                printf("Inverted image saved to %s\n", output_filename);
+            if (savePGMimage(outputFilepath, processedImage, height, width, maxGrey)) {
+                printf("Inverted image saved to %s\n", outputFilepath);
             } else {
                 printf("Failed to save inverted image\n");
             }
             
             /* Free the processed image memory */
-            free_image_array(processed_image, height);
+            freeImage(processedImage, height);
             break;
             
         case 3: /* Rotate image */
             /* TODO: Refactor this section to use your PGMImage structure */
             printf("Enter rotation in degrees (90, 180, or 270): ");
-            scanf("%d", &rotation_degrees);
+            scanf("%d", &rotationDeg);
             getchar(); /* Consume newline */
             
             /* Validate rotation degrees */
-            if (rotation_degrees != 90 && rotation_degrees != 180 && rotation_degrees != 270) {
+            if (rotationDeg != 90 && rotationDeg != 180 && rotationDeg != 270) {
                 printf("Invalid rotation angle. Please use 90, 180, or 270 degrees.\n");
                 break;
             }
             
-            printf("Rotating image by %d degrees...\n", rotation_degrees);
-            processed_image = rotate_image(image_pixels, height, width, rotation_degrees);
+            printf("Rotating image by %d degrees...\n", rotationDeg);
+            processedImage = rotateImage(imagePixels, height, width, rotationDeg);
             
-            printf("Enter output filename: ");
-            scanf("%99s", output_filename);
+            printf("Enter output filePath: ");
+            scanf("%99s", outputFilepath);
             getchar(); /* Consume newline */
             
             /* For 90 and 270 degree rotations, height and width are swapped */
-            if (rotation_degrees == 90 || rotation_degrees == 270) {
-                if (save_pgm_image(output_filename, processed_image, width, height, max_gray)) {
-                    printf("Rotated image saved to %s\n", output_filename);
+            if (rotationDeg == 90 || rotationDeg == 270) {
+                if (savePGMimage(outputFilepath, processedImage, width, height, maxGrey)) {
+                    printf("Rotated image saved to %s\n", outputFilepath);
                 } else {
                     printf("Failed to save rotated image\n");
                 }
-                free_image_array(processed_image, width);
+                freeImage(processedImage, width);
             } else { /* 180 degrees */
-                if (save_pgm_image(output_filename, processed_image, height, width, max_gray)) {
-                    printf("Rotated image saved to %s\n", output_filename);
+                if (savePGMimage(outputFilepath, processedImage, height, width, maxGrey)) {
+                    printf("Rotated image saved to %s\n", outputFilepath);
                 } else {
                     printf("Failed to save rotated image\n");
                 }
-                free_image_array(processed_image, height);
+                freeImage(processedImage, height);
             }
             break;
             
         case 4: /* Quit */
             printf("Exiting program...\n");
             /* Free the original image memory before exiting */
-            free_image_array(image_pixels, height);
+            freeImage(imagePixels, height);
             return 0;
             
         default:
@@ -141,12 +130,12 @@ int main(int argc, char **argv) {
 }
 
 /**
- * @brief Gets user menu choice from standard input
- * 
- * @param message The prompt message to display
- * @return int The user's choice, or -1 if invalid input
+*  @brief Gets user menu choice from standard input
+*  
+*  @param message The prompt message to display
+*  @return int The user's choice, or -1 if invalid input
  */
-int get_user_menu_choice(const char *message) {
+int getUserMenuChoice(const char* message) {
     char buffer[100];
     int choice;
     printf("%s: ", message);
@@ -159,9 +148,9 @@ int get_user_menu_choice(const char *message) {
 }
 
 /**
- * @brief Displays the main program menu
+*  @brief Displays the main program menu
  */
-void display_menu(void) {
+void displayMenu(void) {
     printf("\n----- PGM Image Tool Menu -----\n");
     printf("1 - View PGM Image\n");
     printf("2 - Invert Image\n");
@@ -170,234 +159,236 @@ void display_menu(void) {
 }
 
 /**
- * @brief Allocates a 2D array for storing the image pixels
- * 
- * @param height Number of rows in the image
- * @param width Number of columns in the image
- * @return unsigned char** 2D array of image pixels, or NULL if allocation fails
+*  @brief Allocates a 2D array for storing the image pixels
+*  
+*  @param width Number of columns in the image
+*  @param height Number of rows in the image
+*  @return PGMImage_t allocated image.
  */
-unsigned char **allocate_image_array(int height, int width) {
-    /* TODO: Refactor this to use your PGMImage structure */
-    unsigned char **array = calloc(height, sizeof(unsigned char *));
-    if (array == NULL) {
+PGMImage_t allocateImage(int width, int height) {
+    PGMImage_t img;
+    img.width = width;
+    img.height = height;
+
+    img.data = calloc(height, sizeof(uchar*));
+    if (img.data == NULL) {
         printf("Error: Memory allocation failed for image array\n");
         return NULL;
     }
     
-    for (int i = 0; i < height; i++) {
-        array[i] = calloc(width, sizeof(unsigned char));
-        if (array[i] == NULL) {
+    for (uint i=0u; i<height; i++) {
+        img.data[i] = calloc(width, sizeof(uchar));
+        if (img.data[i] == NULL) {
             /* Free previously allocated memory if this allocation fails */
-            for (int j = 0; j < i; j++) {
-                free(array[j]);
+            for (uint j=0u; j<i; j++) {
+                free(img.data[j]);
             }
-            free(array);
+            free(img.data);
             printf("Error: Memory allocation failed for image row %d\n", i);
             return NULL;
         }
     }
 
-    return array;
+    return img;
 }
 
 /**
- * @brief Frees memory allocated for a 2D image array
- * 
- * @param image The 2D image array to free
- * @param height Number of rows in the image
+*  @brief Frees memory allocated for a 2D image array
+*  
+*  @param image The PGM image to free
  */
-void free_image_array(unsigned char **image, int height) {
-    /* TODO: Refactor this to use your PGMImage structure */
-    if (image == NULL) return;
+void freeImage(PGMImage_t* img) {
+    if (img->data == NULL) return;
     
-    for (int i = 0; i < height; i++) {
-        free(image[i]);
+    for (uint i=0u; i<img->height; i++) {
+        free(img->data[i]);
     }
-    free(image);
+    free(img->data);
 }
 
 /**
- * @brief Reads a PGM image from a file
- * 
- * @param filename Path to the PGM file
- * @param height Pointer to store the image height
- * @param width Pointer to store the image width
- * @param max_gray Pointer to store the max gray value
- * @return unsigned char** 2D array of image pixels, or NULL if reading fails
+*  @brief Reads a PGM image from a file
+*  
+*  @param filePath Path to the PGM file
+*  @param height Pointer to store the image height
+*  @param width Pointer to store the image width
+*  @param maxGrey Pointer to store the max gray value
+*  @return unsigned char** 2D array of image pixels, or NULL if reading fails
  */
-unsigned char **read_pgm_image(const char *filename, int *height, int *width, int *max_gray) {
-    /* TODO: Refactor this to use your PGMImage structure */
-    FILE *file = fopen(filename, "r");
+PGMImage_t readPGMimage(const char* filePath) {
+    int width, height;
+
+    FILE* file = fopen(filePath, "r");
     if (file == NULL) {
-        printf("Error: Could not open file %s\n", filename);
+        printf("Error: Could not open file %s\n", filePath);
         return NULL;
     }
     
     /* Read PGM header */
-    char magic_number[3];
-    if (fscanf(file, "%2s", magic_number) != 1) {
+    char magicNumber[3];
+    if (fscanf(file, "%2s", magicNumber) != 1) {
         printf("Error: Invalid PGM file format\n");
         fclose(file);
         return NULL;
     }
     
-    if (strcmp(magic_number, "P2") != 0) {
+    if (strcmp(magicNumber, "P2") != 0) {
         printf("Error: File is not a valid PGM file (P2 format)\n");
         fclose(file);
         return NULL;
     }
     
-    if (fscanf(file, "%d %d", width, height) != 2) {
+    if (fscanf(file, "%d %d", &width, &height) != 2) {
         printf("Error: Could not read image dimensions\n");
         fclose(file);
         return NULL;
     }
     
-    if (fscanf(file, "%d", max_gray) != 1) {
+    if (fscanf(file, "%d", maxGrey) != 1) {
         printf("Error: Could not read max gray value\n");
         fclose(file);
         return NULL;
     }
     
     /* Allocate memory for the pixel array */
-    unsigned char **pixels = allocate_image_array(*height, *width);
-    if (pixels == NULL) {
+    PGMImage_t img = allocateImage(height, width);
+    if (img.data == NULL) {
         fclose(file);
         return NULL;
     }
     
     /* Read pixel values */
-    int pixel_value;
-    for (int i = 0; i < *height; i++) {
-        for (int j = 0; j < *width; j++) {
-            if (fscanf(file, "%d", &pixel_value) != 1) {
+    int pixelValue;
+    for (uint i=0u; i<height; i++) {
+        for (uint j=0u; j<width; j++) {
+            if (fscanf(file, "%d", &pixelValue) != 1) {
                 printf("Error: Could not read pixel value at position (%d,%d)\n", j, i);
-                free_image_array(pixels, *height);
+                freeImage(img);
                 fclose(file);
                 return NULL;
             }
-            pixels[i][j] = (unsigned char)pixel_value;
+            img.data[i][j] = (unsigned char)pixelValue;
         }
     }
     
     fclose(file);
-    return pixels;
+    return img;
 }
 
 /**
- * @brief Prints information about the PGM image
- * 
- * @param filename Name of the image file
- * @param height Image height
- * @param width Image width
- * @param max_gray Maximum gray value
+*  @brief Prints information about the PGM image
+*  
+*  @param filePath Name of the image file
+*  @param height Image height
+*  @param width Image width
+*  @param maxGrey Maximum gray value
  */
-void print_image_info(const char *filename, int height, int width, int max_gray) {
+void printImageInfo(const char* filePath, PGMImage_t* img) {
     /* TODO: Refactor this to use your PGMImage structure */
-    printf("Image: %s\n", filename);
-    printf("Dimensions: %d x %d pixels\n", width, height);
-    printf("Max Gray Value: %d\n", max_gray);
+    printf("Image: %s\n", filePath);
+    printf("Dimensions: %d x %d pixels\n", img->width, img->height);
+    printf("Max Gray Value: %d\n", img->maxGrey);
 }
 
 /**
- * @brief Prints the pixel values of the image
- * 
- * @param pixels The 2D array of image pixels
- * @param height Image height
- * @param width Image width
+*  @brief Prints the pixel values of the image
+*  
+*  @param pixels The 2D array of image pixels
+*  @param height Image height
+*  @param width Image width
  */
-void print_image_values(unsigned char **pixels, int height, int width) {
+void printImageValues(PGMImage_t* img) {
     /* TODO: Refactor this to use your PGMImage structure */
-    printf("\nImage Pixel Values (%dx%d):\n", width, height);
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            printf("%3d ", pixels[i][j]);
+    printf("\nImage Pixel Values (%dx%d):\n", img->width, img->height);
+    for (uint i=0; i<img->height; i++) {
+        for (uint j=0u; j<img->width; j++) {
+            printf("%3d ", img->data[i][j]);
         }
         printf("\n");
     }
 }
 
 /**
- * @brief Inverts the colours of the image (255-value)
- * 
- * @param original_image Original image pixels
- * @param height Image height
- * @param width Image width
- * @param max_gray Maximum gray value
- * @return unsigned char** New image with inverted colours
+*  @brief Inverts the colours of the image (255-value)
+*  
+*  @param originalImage Original image pixels
+*  @param height Image height
+*  @param width Image width
+*  @param maxGrey Maximum gray value
+*  @return unsigned char** New image with inverted colours
  */
-unsigned char **invert_image_colors(unsigned char **original_image, int height, int width, int max_gray) {
+PGMImage_t invertImageColours(PGMImage_t* originalImage) {
     /* TODO: Refactor this to use your PGMImage structure */
     /* Allocate memory for the inverted image */
-    unsigned char **inverted_image = allocate_image_array(height, width);
-    if (inverted_image == NULL) {
+    PGMImage_t invImage = allocateImage(originalImage->height, originalImage->width);
+    if (invImage.data == NULL) {
         return NULL;
     }
     
-    /* Invert each pixel (max_gray - value) */
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            inverted_image[i][j] = max_gray - original_image[i][j];
+    /* Invert each pixel (maxGrey - value) */
+    for (uint i=0u; i<originalImage->height; i++) {
+        for (uint j=0u; j<originalImage->width; j++) {
+            invImage.data[i][j] = originalImage->maxGrey - originalImage->data[i][j];
         }
     }
     
-    return inverted_image;
+    return invImage;
 }
 
 /**
- * @brief Rotates the image by the specified angle
- * 
- * @param original_image Original image pixels
- * @param height Image height
- * @param width Image width
- * @param degrees Rotation angle (90, 180, or 270 degrees)
- * @return unsigned char** New rotated image
+*  @brief Rotates the image by the specified angle
+*  
+*  @param originalImage Original image pixels
+*  @param height Image height
+*  @param width Image width
+*  @param degrees Rotation angle (90, 180, or 270 degrees)
+*  @return unsigned char** New rotated image
  */
-unsigned char **rotate_image(unsigned char **original_image, int height, int width, int degrees) {
+unsigned char** rotateImage(unsigned char** originalImage, int height, int width, int degrees) {
     /* TODO: Refactor this to use your PGMImage structure */
-    unsigned char **rotated_image;
+    unsigned char** rotImage;
     
     switch (degrees) {
         case 90:
             /* For 90 degrees, width and height are swapped */
-            rotated_image = allocate_image_array(width, height);
-            if (rotated_image == NULL) {
+            rotImage = allocateImage(width, height);
+            if (rotImage == NULL) {
                 return NULL;
             }
             
             /* 90 degree rotation algorithm */
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
-                    rotated_image[j][height-1-i] = original_image[i][j];
+                    rotImage[j][height-1-i] = originalImage[i][j];
                 }
             }
             break;
             
         case 180:
-            rotated_image = allocate_image_array(height, width);
-            if (rotated_image == NULL) {
+            rotImage = allocateImage(height, width);
+            if (rotImage == NULL) {
                 return NULL;
             }
             
             /* 180 degree rotation algorithm */
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
-                    rotated_image[height-1-i][width-1-j] = original_image[i][j];
+                    rotImage[height-1-i][width-1-j] = originalImage[i][j];
                 }
             }
             break;
             
         case 270:
             /* For 270 degrees, width and height are swapped */
-            rotated_image = allocate_image_array(width, height);
-            if (rotated_image == NULL) {
+            rotImage = allocateImage(width, height);
+            if (rotImage == NULL) {
                 return NULL;
             }
             
             /* 270 degree rotation algorithm */
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
-                    rotated_image[width-1-j][i] = original_image[i][j];
+                    rotImage[width-1-j][i] = originalImage[i][j];
                 }
             }
             break;
@@ -407,31 +398,31 @@ unsigned char **rotate_image(unsigned char **original_image, int height, int wid
             return NULL;
     }
     
-    return rotated_image;
+    return rotImage;
 }
 
 /**
- * @brief Saves a PGM image to a file
- * 
- * @param filename Output filename
- * @param pixels Image pixel array
- * @param height Image height
- * @param width Image width
- * @param max_gray Maximum gray value
- * @return int 1 if successful, 0 if failed
+*  @brief Saves a PGM image to a file
+*  
+*  @param filePath Output filePath
+*  @param pixels Image pixel array
+*  @param height Image height
+*  @param width Image width
+*  @param maxGrey Maximum gray value
+*  @return int 1 if successful, 0 if failed
  */
-int save_pgm_image(const char *filename, unsigned char **pixels, int height, int width, int max_gray) {
+int savePGMimage(const char* filePath, unsigned char** pixels, int height, int width, int maxGrey) {
     /* TODO: Refactor this to use your PGMImage structure */
-    FILE *file = fopen(filename, "w");
+    FILE* file = fopen(filePath, "w");
     if (file == NULL) {
-        printf("Error: Could not create output file %s\n", filename);
+        printf("Error: Could not create output file %s\n", filePath);
         return 0;
     }
     
     /* Write PGM header */
     fprintf(file, "P2\n");
     fprintf(file, "%d %d\n", width, height);
-    fprintf(file, "%d\n", max_gray);
+    fprintf(file, "%d\n", maxGrey);
     
     /* Write pixel values */
     for (int i = 0; i < height; i++) {
