@@ -9,13 +9,13 @@
 
 /* TODO: Update these function prototypes to use your PGMImage structure */
 /* Function prototypes */
-PGMImage_t allocateImage(int height);
+PGMImage_t allocateImage(int width, int height);
 void freeImage(PGMImage_t* image);
 PGMImage_t readPGMimage(const char* filePath);
-void printImageInfo(const char* filePath);
-void printImageValues(PGMImage_t* image, int height, int width);
-PGMImage_t invertImageColours(PGMImage_t* original);
-PGMImage_t rotateImage(PGMImage_t* original, int degrees);
+void printImageInfo(const char* filePath, PGMImage_t* image);
+void printImageValues(PGMImage_t* image);
+void invertImageColours(PGMImage_t* original, PGMImage_t* modified);
+void rotateImage(PGMImage_t* original, PGMImage_t* modified, int degrees);
 int savePGMimage(const char* filePath, PGMImage_t* image);
 int getUserMenuChoice(const char* message);
 void displayMenu(void);
@@ -29,24 +29,22 @@ int main(int argc, char** argv) {
 
     /* TODO: Refactor this section to use your PGMImage structure */
     /* Variables to store image dimensions and max gray value */
-    int height, width, maxGrey;
-    unsigned char** imagePixels;
     
     /* Read the image */
-    imagePixels = readPGMimage(argv[1], &height, &width, &maxGrey);
+    PGMImage_t image = readPGMimage(argv[1]);
     
     /* Check if image reading was successful */
-    if (imagePixels == NULL) {
+    if (image.data == NULL) {
         return 1;
     }
     
     /* Display image information */
-    printImageInfo(argv[1], height, width, maxGrey);
+    printImageInfo(argv[1], &image);
 
     int choice = -1;
     char outputFilepath[100];
     int rotationDeg;
-    unsigned char** processedImage = NULL;
+    PGMImage_t processedImage = image; //Direct copy of original until modified.
 
     /* Main program loop */
     do {
@@ -57,26 +55,23 @@ int main(int argc, char** argv) {
 
         switch (choice) {
         case 1: /* View image */
-            printImageValues(imagePixels, height, width);
+            printImageValues(&image);
             break;
             
         case 2: /* Invert image */
             /* TODO: Refactor this section to use your PGMImage structure */
             printf("Inverting image colours...\n");
-            processedImage = invertImageColours(imagePixels, height, width, maxGrey);
+            invertImageColours(&image, &processedImage);
             
             printf("Enter output filePath: ");
             scanf("%99s", outputFilepath);
             getchar(); /* Consume newline */
             
-            if (savePGMimage(outputFilepath, processedImage, height, width, maxGrey)) {
+            if (savePGMimage(outputFilepath, &processedImage)) {
                 printf("Inverted image saved to %s\n", outputFilepath);
             } else {
                 printf("Failed to save inverted image\n");
             }
-            
-            /* Free the processed image memory */
-            freeImage(processedImage, height);
             break;
             
         case 3: /* Rotate image */
@@ -86,13 +81,13 @@ int main(int argc, char** argv) {
             getchar(); /* Consume newline */
             
             /* Validate rotation degrees */
-            if (rotationDeg != 90 && rotationDeg != 180 && rotationDeg != 270) {
+            if ((rotationDeg != 90) && (rotationDeg != 180) && (rotationDeg != 270)) {
                 printf("Invalid rotation angle. Please use 90, 180, or 270 degrees.\n");
                 break;
             }
             
             printf("Rotating image by %d degrees...\n", rotationDeg);
-            processedImage = rotateImage(imagePixels, height, width, rotationDeg);
+            rotateImage(&image, &processedImage, rotationDeg);
             
             printf("Enter output filePath: ");
             scanf("%99s", outputFilepath);
@@ -100,26 +95,25 @@ int main(int argc, char** argv) {
             
             /* For 90 and 270 degree rotations, height and width are swapped */
             if (rotationDeg == 90 || rotationDeg == 270) {
-                if (savePGMimage(outputFilepath, processedImage, width, height, maxGrey)) {
+                if (savePGMimage(outputFilepath, &processedImage)) {
                     printf("Rotated image saved to %s\n", outputFilepath);
                 } else {
                     printf("Failed to save rotated image\n");
                 }
-                freeImage(processedImage, width);
             } else { /* 180 degrees */
-                if (savePGMimage(outputFilepath, processedImage, height, width, maxGrey)) {
+                if (savePGMimage(outputFilepath, &processedImage)) {
                     printf("Rotated image saved to %s\n", outputFilepath);
                 } else {
                     printf("Failed to save rotated image\n");
                 }
-                freeImage(processedImage, height);
             }
             break;
             
         case 4: /* Quit */
             printf("Exiting program...\n");
             /* Free the original image memory before exiting */
-            freeImage(imagePixels, height);
+            freeImage(&image);
+            freeImage(&processedImage);
             return 0;
             
         default:
@@ -165,6 +159,10 @@ void displayMenu(void) {
 *  @param height Number of rows in the image
 *  @return PGMImage_t allocated image.
  */
+
+//Generic exit condition for the functions to return an "Invalid" image.
+#define EXIT_BAD_IMG img.data=NULL; img.width=0.0f; img.height=0.0f; img.maxGrey=0.0f; return img;
+
 PGMImage_t allocateImage(int width, int height) {
     PGMImage_t img;
     img.width = width;
@@ -173,7 +171,7 @@ PGMImage_t allocateImage(int width, int height) {
     img.data = calloc(height, sizeof(uchar*));
     if (img.data == NULL) {
         printf("Error: Memory allocation failed for image array\n");
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
     for (uint i=0u; i<height; i++) {
@@ -185,7 +183,7 @@ PGMImage_t allocateImage(int width, int height) {
             }
             free(img.data);
             printf("Error: Memory allocation failed for image row %d\n", i);
-            return NULL;
+            EXIT_BAD_IMG;
         }
     }
 
@@ -216,12 +214,13 @@ void freeImage(PGMImage_t* img) {
 *  @return unsigned char** 2D array of image pixels, or NULL if reading fails
  */
 PGMImage_t readPGMimage(const char* filePath) {
-    int width, height;
+    PGMImage_t img;
+    uchar maxGrey;
 
     FILE* file = fopen(filePath, "r");
     if (file == NULL) {
         printf("Error: Could not open file %s\n", filePath);
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
     /* Read PGM header */
@@ -229,43 +228,44 @@ PGMImage_t readPGMimage(const char* filePath) {
     if (fscanf(file, "%2s", magicNumber) != 1) {
         printf("Error: Invalid PGM file format\n");
         fclose(file);
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
     if (strcmp(magicNumber, "P2") != 0) {
         printf("Error: File is not a valid PGM file (P2 format)\n");
         fclose(file);
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
-    if (fscanf(file, "%d %d", &width, &height) != 2) {
+    if (fscanf(file, "%u %u", &img.width, &img.height) != 2) {
         printf("Error: Could not read image dimensions\n");
         fclose(file);
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
-    if (fscanf(file, "%d", maxGrey) != 1) {
+    if (fscanf(file, "%hhi", &maxGrey) != 1) {
         printf("Error: Could not read max gray value\n");
         fclose(file);
-        return NULL;
+        EXIT_BAD_IMG;
     }
     
     /* Allocate memory for the pixel array */
-    PGMImage_t img = allocateImage(height, width);
+    img = allocateImage(img.height, img.width);
     if (img.data == NULL) {
         fclose(file);
-        return NULL;
+        EXIT_BAD_IMG;
     }
+    img.maxGrey = maxGrey;
     
     /* Read pixel values */
     int pixelValue;
-    for (uint i=0u; i<height; i++) {
-        for (uint j=0u; j<width; j++) {
+    for (uint i=0u; i<img.height; i++) {
+        for (uint j=0u; j<img.width; j++) {
             if (fscanf(file, "%d", &pixelValue) != 1) {
                 printf("Error: Could not read pixel value at position (%d,%d)\n", j, i);
-                freeImage(img);
+                freeImage(&img);
                 fclose(file);
-                return NULL;
+                EXIT_BAD_IMG;
             }
             img.data[i][j] = (unsigned char)pixelValue;
         }
@@ -284,7 +284,6 @@ PGMImage_t readPGMimage(const char* filePath) {
 *  @param maxGrey Maximum gray value
  */
 void printImageInfo(const char* filePath, PGMImage_t* img) {
-    /* TODO: Refactor this to use your PGMImage structure */
     printf("Image: %s\n", filePath);
     printf("Dimensions: %d x %d pixels\n", img->width, img->height);
     printf("Max Gray Value: %d\n", img->maxGrey);
@@ -298,7 +297,6 @@ void printImageInfo(const char* filePath, PGMImage_t* img) {
 *  @param width Image width
  */
 void printImageValues(PGMImage_t* img) {
-    /* TODO: Refactor this to use your PGMImage structure */
     printf("\nImage Pixel Values (%dx%d):\n", img->width, img->height);
     for (uint i=0; i<img->height; i++) {
         for (uint j=0u; j<img->width; j++) {
@@ -317,22 +315,13 @@ void printImageValues(PGMImage_t* img) {
 *  @param maxGrey Maximum gray value
 *  @return unsigned char** New image with inverted colours
  */
-PGMImage_t invertImageColours(PGMImage_t* originalImage) {
-    /* TODO: Refactor this to use your PGMImage structure */
-    /* Allocate memory for the inverted image */
-    PGMImage_t invImage = allocateImage(originalImage->height, originalImage->width);
-    if (invImage.data == NULL) {
-        return NULL;
-    }
-    
+void invertImageColours(PGMImage_t* originalImage, PGMImage_t* modified) {    
     /* Invert each pixel (maxGrey - value) */
     for (uint i=0u; i<originalImage->height; i++) {
         for (uint j=0u; j<originalImage->width; j++) {
-            invImage.data[i][j] = originalImage->maxGrey - originalImage->data[i][j];
+            modified->data[i][j] = originalImage->maxGrey - originalImage->data[i][j];
         }
     }
-    
-    return invImage;
 }
 
 /**
@@ -344,61 +333,49 @@ PGMImage_t invertImageColours(PGMImage_t* originalImage) {
 *  @param degrees Rotation angle (90, 180, or 270 degrees)
 *  @return unsigned char** New rotated image
  */
-unsigned char** rotateImage(unsigned char** originalImage, int height, int width, int degrees) {
-    /* TODO: Refactor this to use your PGMImage structure */
-    unsigned char** rotImage;
-    
+#define WIDTH original->width
+#define HEIGHT original->height
+void rotateImage(PGMImage_t* original, PGMImage_t* modified, int degrees) {
     switch (degrees) {
         case 90:
             /* For 90 degrees, width and height are swapped */
-            rotImage = allocateImage(width, height);
-            if (rotImage == NULL) {
-                return NULL;
-            }
+            *modified = allocateImage(WIDTH, HEIGHT);
+            if (modified->data == NULL) {return;}
             
             /* 90 degree rotation algorithm */
-            for (int i = 0; i < height; i++) {
-                for (int j = 0; j < width; j++) {
-                    rotImage[j][height-1-i] = originalImage[i][j];
+            for (uint i=0; i<HEIGHT; i++) {
+                for (uint j=0u; j<WIDTH; j++) {
+                    modified->data[j][HEIGHT-1-i] = original->data[i][j];
                 }
             }
             break;
             
-        case 180:
-            rotImage = allocateImage(height, width);
-            if (rotImage == NULL) {
-                return NULL;
-            }
-            
+        case 180:            
             /* 180 degree rotation algorithm */
-            for (int i = 0; i < height; i++) {
-                for (int j = 0; j < width; j++) {
-                    rotImage[height-1-i][width-1-j] = originalImage[i][j];
+            for (uint i=0u; i<HEIGHT; i++) {
+                for (uint j=0u; j<WIDTH; j++) {
+                    modified->data[HEIGHT-1-i][WIDTH-1-j] = original->data[i][j];
                 }
             }
             break;
             
         case 270:
             /* For 270 degrees, width and height are swapped */
-            rotImage = allocateImage(width, height);
-            if (rotImage == NULL) {
-                return NULL;
-            }
+            *modified = allocateImage(WIDTH, HEIGHT);
+            if (modified->data == NULL) {return;}
             
             /* 270 degree rotation algorithm */
-            for (int i = 0; i < height; i++) {
-                for (int j = 0; j < width; j++) {
-                    rotImage[width-1-j][i] = originalImage[i][j];
+            for (uint i=0u; i<HEIGHT; i++) {
+                for (uint j=0u; j<WIDTH; j++) {
+                    modified->data[WIDTH-1-j][i] = original->data[i][j];
                 }
             }
             break;
             
         default:
             printf("Error: Invalid rotation angle\n");
-            return NULL;
+            return;
     }
-    
-    return rotImage;
 }
 
 /**
@@ -411,7 +388,7 @@ unsigned char** rotateImage(unsigned char** originalImage, int height, int width
 *  @param maxGrey Maximum gray value
 *  @return int 1 if successful, 0 if failed
  */
-int savePGMimage(const char* filePath, unsigned char** pixels, int height, int width, int maxGrey) {
+int savePGMimage(const char* filePath, PGMImage_t* image) {
     /* TODO: Refactor this to use your PGMImage structure */
     FILE* file = fopen(filePath, "w");
     if (file == NULL) {
@@ -421,13 +398,13 @@ int savePGMimage(const char* filePath, unsigned char** pixels, int height, int w
     
     /* Write PGM header */
     fprintf(file, "P2\n");
-    fprintf(file, "%d %d\n", width, height);
-    fprintf(file, "%d\n", maxGrey);
+    fprintf(file, "%d %d\n", image->width, image->height);
+    fprintf(file, "%d\n", image->maxGrey);
     
     /* Write pixel values */
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            fprintf(file, "%d ", pixels[i][j]);
+    for (uint i=0u; i<image->height; i++) {
+        for (uint j=0u; j<image->width; j++) {
+            fprintf(file, "%d ", image->data[i][j]);
         }
         fprintf(file, "\n");
     }

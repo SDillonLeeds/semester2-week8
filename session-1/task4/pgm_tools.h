@@ -13,7 +13,7 @@ typedef unsigned int uint;
 typedef unsigned char uchar;
 
 typedef struct {
-    float width, height;
+    uint width, height;
     uchar maxGrey;
     uchar** data;
 } PGMImage_t;
@@ -25,8 +25,8 @@ void freeImage(PGMImage_t* image);
 PGMImage_t readPGMimage(const char* filePath);
 void printImageInfo(const char* filePath, PGMImage_t* img);
 void printImageValues(PGMImage_t* image);
-PGMImage_t invertImageColours(PGMImage_t* original);
-PGMImage_t rotateImage(PGMImage_t* original, int degrees);
+void invertImageColours(PGMImage_t* original, PGMImage_t* modified);
+void rotateImage(PGMImage_t* original, PGMImage_t* modified, int degrees);
 int savePGMimage(const char* filePath, PGMImage_t* image);
 int getUserMenuChoice(const char* message);
 void displayMenu(void);
