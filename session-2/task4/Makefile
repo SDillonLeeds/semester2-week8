@@ -1,13 +1,13 @@
 
 student: student.o main.o
-	gcc student.o main.o -o student
+	gcc obj/student.o obj/main.o -o prgm
 
-main.o: main.c student.h structure.h
-	gcc -c main.c
+main.o: src/main.c include/student.h include/structure.h
+	gcc -c src/main.c -o obj/main.o
 
-student.o: student.c student.h structure.h
-	gcc -c student.c
+student.o: src/student.c include/student.h include/structure.h
+	gcc -c src/student.c -o obj/student.o
 
 clean:
-	rm student.o main.o student
+	rm obj/student.o obj/main.o prgm
 	

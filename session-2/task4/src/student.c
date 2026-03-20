@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "../include/structure.h"
-#include "../include/student.h"
 
 /**
  * @brief Calculate the average mark for a student

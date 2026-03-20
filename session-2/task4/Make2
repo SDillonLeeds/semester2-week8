@@ -10,7 +10,7 @@ _INC = student.h structure.h
 OBJDIR = obj
 _OBJ = student.o main.o 
 EXEDIR = bin
-_EXE = student
+_EXE = prgm
 
 SRC = $(patsubst %,$(SRCDIR)/%,$(_SRC))
 INC = $(patsubst %,$(INCDIR)/%,$(_INC))
